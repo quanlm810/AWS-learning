@@ -110,3 +110,27 @@
     - Download common files from the internet
     - ...
 - EC2 User Data will run with root user right
+### Introduction to security groups
+- Security groups is the fundamental for doing network security in AWS
+- Control how trafic is allowed into (inbound network) or out (outbound network) of EC2 instances (regulate access to ports, authorize IP ranges)
+- Security groups only include **ALLOW** rules
+- Security groups can reference IP address or other security groups
+- By default EC2 instances allow all outbound network traffic and block all inbound traffic
+- Can be attached to multiple instances
+- Locked down to a region/VPC combination
+- Does live "outside" the EC2 instance, if a traffic is blocked the EC2 instance will not see the traffic
+- It's good to maintain a seperate security group for SSH access
+- If the application is not accessible (timeout), then it is a security group issue
+- If the application gives a "connection refused" errro, then it is **NOT** a security group issue
+### Classic port to know
+- SSH (Secure Shell) - log into a linux instance: 22
+- FTP (File transfer protocol) - upload files into a file share: 21
+- SFTP (Secure file transfer protocol) - upload file using SSH: 22
+- HTTP - access unsecured websites: 80
+- HTTPS - access secured websites: 443
+- RDP (Remote Destop protocol)  - log into a window instances: 3389
+### SSH Overview
+- Base on different OS there are different ways to connect to remote shell:
+    - Mac, Linux and Window >= 10 can use SSH to connect
+    - Window < 10 can use Putty to connect
+    - In addition EC2 Instance Connect can be used with any browser to connect
