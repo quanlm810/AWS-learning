@@ -208,3 +208,180 @@
 - Combine with Regional Reserved instances and Saving Plans to benefit from billing discounts
 - Charged with On-Demand rate whether you run the instances or not
 - Suitable for short term uninterrupted workloads that needs to be in a specific AZ
+
+## EC2 Instance Storage
+### EBS Volume
+- Elastic Block Store is a network attached drive that can be connect to EC2 instance:
+    - Using network to communicate -> some latency
+    - Can be easily detach/attach to EC2 instances
+- Allow data to persist even after EC2 instance is terminated
+- Most EBS can be attached to one instance at a time (some EBS have multi-attach feature)
+- They are bound to AZ
+    - To move EBS Volume accorss AZ a snapshot need to be created
+- Have a provisioned capacity (size in GBs, and IOPS)
+    - Get billed for the capacity
+    - Can be increase over time
+- Delete on termination: The EBS will be terminated along side the EC2 instance (automatically ticked for root volume)
+### EBS Snapshot
+- Make a backup for EBS volume at any point in time
+- Not neccessary to detach EBS before taking snapshot, but it is recommended
+- Can be copied accross AZ and Region
+#### EBS Snapshot Features
+- EBS Snapshot Archive: Move snapshot to an "archive tier" which is 75% cheaper (Take 24 - 72 hrs for restoring)
+- Recycle bin for EBS Snapshot: Allow setup rules to retain deleted snapshot (1 day - 1 year) so it can be recorvered once deleted
+- Fast Snapshot Restore (FSR): force full initialization of snapshot to have no latency on first use (cost money)
+### AMI (Amazon Machine Image)
+- An AMI is a customization of an EC2 instance
+    - Inlcude software, configuration, OS, monitor, ...
+    - Faster boot/configuration time because all softwares are pre-packaged
+- AMI are built for specific region (can be copied accross regions)
+- Types of AMI:
+    - Public AMI (AWS provided)
+    - Your own AMI (self-make and maintain)
+    - AWS marketplace AMI (someone else make and sell it)
+#### AMI process
+- Start an EC2 instance and customize it
+- Stop the instance (for data integrity)
+- Build an AMI - This will also create an EBS snapshots
+- Launch instances from other AMIs
+### EC2 Instance Store
+- EBS volumes are network drives with good but "limited" performance
+- EC2 Instacne Store is a hardward disk attached directly to EC2
+- Better I/O performance (can read upto 3M read/ 2M write IOPS)
+- Lost if they are stopped (emphemeral)
+- Good for buffer/cache/scratch data/temporary content
+- Risk losing data if hardware fails
+- Backup and Replication are your responsibility
+### EBS Volume types
+- Come in 6 different types:
+    - gp2/gp3 (SSD): General purpose SSD volume that balance price and performance for a variety of task
+    - io1/io2 Block Express (SSD): Highest perfromance SSD volumes for mission-critical low-latency or high-throughput workloads
+    - st1 (HDD): Low cost HDD volume designed for frequent accessed, throughtput intensive workloads
+    - sc1 (HDD): Lowest cost HDD volume designed for less frequent accessed workloads
+- Volumes are characterized in Size|Throughput|IOPS
+- Only gp2/gp3 and io1/io2 Block Express can be used as boot volumes
+#### General purpose SSD:
+- Cost effective storage, low latency
+- Use for system boot volumes, virtual desktops, development and test environment
+- Size: 1Gb - 16Tbs
+- gp3:
+    - Baseline of 3000 IOPS and throughput of 125MiB/s
+    - Can increase IOPS up to 16000 and throughput up to 1000MiB/s independently
+- gp2:
+    - Small gp2 volumes can burst IOPS to 3000
+    - Size of volume and IOPS are linked, max IOPS is 16000 (3 IOPS per GiB)
+#### Provisioned IOPS SSD:
+- Use for critical business applications with substained IOPS performance
+- Use for application that need more than 16000 IOPS
+- Great for database workloads (sensitive to storage performance and consistency)
+- io1 (4GiB - 16TiB):
+    - Max PIOPS: 64k for Nitro EC2 instance &amp; 32k for other
+    - Size of volume and IOPS are independent
+- io2 Block Express (4GiB - 64TiB):
+    - Sub milisecond latency
+    - Max PIOPS: 256k (1k IOPS per GiB)
+- Support EBS Multi-attach
+#### Hard disk drives (HHD):
+- Cannot be used as boot volume
+- Size: 125 GiB - 16TiB
+- Throughput Optimized HDD (st1):
+    - Use for big data, datawarehouses, log processing
+    - Max throughput of 500 MiB/s - max IOPS 500
+- Cold HDD (sc1):
+    - For data with infrequently accessed (archived data)
+    - Use for scenerios require the lowest cost possible
+    - Max throughput of 250 MiB/s - max IOPS 250
+### EBS multi-attach - io1/io2 family
+- Allow EBS to attach to multiple EC2 instances in the same AZ
+- Each instance will have full read/write permission
+- Use case:
+    - Archieve higher application availability
+    - Application must manage concurrent write operations
+- Upto 16 EC2 instances at a time
+- Must use a file system that is cluster-aware
+### EFS - Elastic file system
+- Managed NFS (network file system) that can be mounted to many EC2 instances
+- EFS works with EC2 instances in multi-AZ
+- Highly available, scalable, expensive, pay per use
+- Use cases: content management, web serving, data sharing, Wordpress
+- Uses security group to control access to EFS
+- Only compatible with Linux base AMI (not Windows)
+- Encryption at rest using KMS
+- File system scale automatically, pay per use, no capacity planing
+#### Performance &amp; storage classes
+- EFS scale:
+    - 1000s of concurrent NFS clients, 10 GB+/s throughput
+    - Grow to PB-scale automatically
+- Performance mode (set at creation time):
+    - General purpose (default): for latency sensitive use-cases (web server, CMS, etc...)
+    - Max I/O: higher latency, throughput, highly parallel (big data, media processing)
+    - Throughput Mode:
+        - Bursting: 1Tb = 50MB/s + burst up to 100MB/s
+        - Provision: Set throughput regardless of storage size
+        - Elastic: Automatically scales throughput up or down based on your workloads
+- Storage classes:
+    - Storage tier (lifecycle management feature - move file after N days):
+        - Standard: for frequently accessed files
+        - Infrequent access (EFS-IA): cost to retrieve files, lower storage price
+        - Archive: rarely accessed data (few times each year), 50% cheaper
+    - Implement live cycle policy to move file between storage tiers
+    - Availability and durability:
+        - Standard: Multi AZ, great for production
+        - One zone: One AZ, great for dev, back up enabled by default, compatible with IA
+### EBS vs EFS
+- EBS volumes:
+    - Attach to one instance at a time (except multi-attach io1/io2)
+    - Are lock at AZ level
+    - Migrate accross AZ using snapshot
+    - Root EBS volume will terminate by default if the EC2 instance is destroyed
+- EFS:
+    - Mount up to 100s of instances accross AZ
+    - Only for linux instance
+    - EFS have higher price point than EBS
+    - Can leverage storage tier for cost saving
+
+## ELB &amp; ASG
+### Scalability
+- Scalability means that your system can handle a greater load by adapting
+- There are two types of scalability:
+    - Vertical scalability
+    - Horizontal scalability (elasticity)
+- Scalability is linked to but different to High Availability
+#### Vertical scalability
+- Vertical scalability means increasing the size of the instance
+- Vertical scalability is very common for non-distributed systems, such as a database
+- RDS, ElasticCache are services that can scale vertically
+- There a limit to how much you can scale (hardware limit)
+#### Horizontal scalability
+- Horizontal scalability means increasing the number of instances/systems for your application
+- Horizontal scalability implies distributed systems
+- Very common for web application/modern applications
+### High availability
+- High availability means running your application on at least 2 data centers
+- The goal of high availability is to survive a data center loss
+- High availability can be passive (for RDS mutli AZ) or active (for horizontal scaling)
+### Load balancing
+- Load balancers are servers that forward traffic to multiple servers downstream
+- Allow spreading load across multiple downstream instances
+- Expose a single point of access (DNS) to your application
+- Seamlessly handle failure of downstream instances
+- Do regular health checks to your instances
+- Provide SSL termination for your websites
+- Enforce stickiness with cookies
+- High availability across zones
+- Seperate public traffic from private traffic
+#### Elastic load balancer
+- Elastic load balancer is a managed load balancer
+- It cost less to setup your own load balancer but require more effort on your end
+- Integrated with AWS services/offerings
+#### Health checks
+- Health checks are crucial for load balancers
+- They enable the load balancer to know if instances it forwards traffic to are available to reply to requests
+- The health check is done on a port and route
+#### Types of load balancers
+- There are 4 types of load balancers:
+    - Classic load balancer (v1 - old generation) - 2009 - CLB
+    - Application load balancer (v2 - new generation) - 2016 - ALB (for HTTP, HTTPS, WebSocket)
+    - Network load balancer (v2 - new generation) - 2017 - NLB (for TCP, TLS, UDP)
+    - Gateway load balancer (v2 - new generation) - 2020 - GWLB (operate at network level, IP protocol)
+- Load balancer can be setup as internal (private) or external (public)
