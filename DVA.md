@@ -443,3 +443,76 @@
 - Without cross-zone load balancing the load is distributed evenly access all load balancer nodes
 - Enabled by default for ALB (can be disable at target groups level), no charge for inter AZ data
 - Disabled by default for NLB and GWLB, charged for inter AZ data
+### SSL/TLS - basic
+- An SSL Certificates allows traffic between your client and your load balancer to encrypted in transit
+- SSL refers to Secure Socket Layer, used to encrypt connections
+- TLS refers to Transport Layer Security, which is a newer version
+- Nowadays, TLS certificates are mainly used, but people still refer it as SSL
+- Public SSL certificates are issued by Certificate Authorities (CA) (Comodo, Symatec, GoDaddy,...)
+- SSL certificates have an expiration date (you set) and must be renewed
+### Load Balancer - SSL Certificates
+- The load balancer uses an X.509 certificates (SSL/TLS server certificate)
+- You can manage certificates in AWS using ACM (AWS Certificate Manager)
+- You can create and upload your own certificates alternately
+- HTTPS listener:
+    - You must specify a default certificate
+    - You can add an optional list of certs to support multiple domains
+    - Client can use SNI (Server Name Indication) to specify the hostname they reach
+    - Ability to specify a security policy to support older version of SSL/TLS (legacy clients)
+### SSL - Server Name Indication (SNI)
+- SNI Solves the problem of loading multiple SSL certificates onto one web server (to serve multiple websites)
+- It's a newer protocol, and require the client to indicate the hostname of the target in the initial SSL handshake
+- The server will then find the correct certificate, or return the default one
+**Note:** Only works for ALB and NLB (newer generation), CloudFront
+### Connection Draining
+- Feature naming:
+    - Connection Draining - for CLB
+    - Deregistration Delay - for ALB & NLB
+- Time to complete "in-flight request" while the instance is deregistering or unhealthy
+- Stop sending new requests to the EC2 instance which is de-registering
+- Between 1 to 3600s (default: 300s)
+- Can be disabled (set value to 0)
+### Auto Scaling Group
+- In real life, the load of your website and application can change
+- In the cloud, you can create and get rid of servers very quickly
+- The goal of an Auto Scaling Group (ASG) is to:
+    - Scale out (add EC2 instances) to match an increased load
+    - Scale in (remove EC2 instances) to match in decreased load
+    - Ensure we have minimum and maximum number of EC2 instances running
+    - Automatically register new instances to a load balancer
+    - Re-create an EC2 instance in case a previous on is terminated
+- ASG are free (you only pay for the underlying EC2 instances)
+#### Auto Scaling Group Attributes
+- A Launch Template (older "Launch Configuration" are deprecated):
+    - AMI + instance type
+    - EC2 user data
+    - EBS volumes
+    - Security groups
+    - SSH Key Pair
+    - IAM roles for your EC2 instances
+    - Network + Subnets information
+    - Load Balancer Information
+- Min Size / Max Size / Initial Capacity
+- Scaling policies
+#### Auto Scaling - CloudWatch Alarms &amp; Scaling
+- It is possible to scale and ASG based on CloudWatch alarms
+- An alarm monitors a metric (such as Average CPU, or a custom metric)
+- Metric such as Average CPU are computed for the overall ASG instances
+- Based on the alarm:
+    - We can create scale-out policies (increase the number of instances)
+    - We can create scale-in policies (decrease the number of instances)
+#### Auto Scaling - Scaling Policies
+- Dynamic Scaling: Based on metric like CPU
+    - Target Tracking Scaling
+    - Step Scaling
+- Schedule Scaling: Anticipate scaling based on know usage patterns
+- Predictive Scaling: Continuously forecast load and schedule scaling ahead
+#### Auto Scaling - Scaling Metric
+- CPU utilization: Average CPU utilization accross your instances
+- Request count per target: Make sure the request per EC2 instance is stable
+- Average network I/O (if your application is network bound)
+- Any custom metric (pushed using CloudWatch)
+#### Scaling cooldown
+- After a scaling activity happens, you are in the cooldown period (default 300 seconds)
+- During the scaling cooldown period the ASG will not launch or terminate additional instances (to allow metrics to be stablize)
+- Use a ready-to-use AMI to reduce the configuration time in order to serve the request faster and reduce the cooldown period
